@@ -8,24 +8,17 @@ import {
 import '@xyflow/react/dist/style.css';
 import { LayoutGrid, Wand2, BookOpen } from 'lucide-react';
 import { getAwsServicesCatalog, AwsServiceCat } from '../actions/awsPricing';
+import { calculateServicePrice } from '../lib/pricing-calculators';
+import NodeInspector from '../components/NodeInspector';
 
 // --- CUSTOM NODE ---
-const ServiceNode = ({ data }: any) => {
+const ServiceNode = ({ data, selected }: any) => {
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 w-48 shadow-xl text-white">
+    <div className={`bg-gray-900 border ${selected ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.3)]' : 'border-gray-700'} rounded-lg p-3 w-48 shadow-xl text-white transition-all`}>
       <Handle type="target" position={Position.Left} className="w-3 h-3 bg-gray-500" />
       <div className="flex items-center gap-2 mb-2">
         <div className="w-6 h-6 rounded bg-indigo-600"></div>
-        <span className="font-semibold text-sm">{data.name}</span>
-      </div>
-      <div className="flex justify-between items-center text-xs text-gray-400">
-        <span>Instances:</span>
-        <input 
-          type="number" 
-          defaultValue={1} 
-          min={1} 
-          className="w-12 bg-gray-800 text-white rounded px-1 text-right border border-gray-700" 
-        />
+        <span className="font-semibold text-sm">{data.name} {data.config?.instances > 1 ? `(${data.config.instances}x)` : ''}</span>
       </div>
       <div className="mt-2 pt-2 border-t border-gray-700 font-mono text-sm text-right text-indigo-400">
         ${data.price.toFixed(2)}/mo
@@ -44,6 +37,8 @@ export default function CostEstimatorApp() {
   const [activeLeftPanel, setActiveLeftPanel] = useState<'none' | 'wizard' | 'examples'>('none');
   const [categories, setCategories] = useState<AwsServiceCat[]>([]);
   const [region, setRegion] = useState("US East (N. Virginia)");
+  const [globalRps, setGlobalRps] = useState(10);
+  const [searchQuery, setSearchQuery] = useState('');
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -65,6 +60,32 @@ export default function CostEstimatorApp() {
        });
     });
   }, [region, setNodes]);
+
+  useEffect(() => {
+    setNodes((currentNodes) => {
+       if (currentNodes.length === 0) return currentNodes;
+       return currentNodes.map(node => {
+          const dynamicPrice = calculateServicePrice(node.data.id, node.data.basePrice, node.data.config, { rps: globalRps });
+          return { ...node, data: { ...node.data, price: dynamicPrice } };
+       });
+    });
+  }, [globalRps, setNodes]);
+
+  const selectedNode = nodes.find((n: any) => n.selected);
+
+  const updateNodeConfig = (id: string, newConfig: any) => {
+    setNodes(currentNodes => currentNodes.map(node => {
+      if (node.id === id) {
+         const mergedConfig = { ...node.data.config, ...newConfig };
+         const dynamicPrice = calculateServicePrice(node.data.id, node.data.basePrice, mergedConfig, { rps: globalRps });
+         return {
+            ...node,
+            data: { ...node.data, config: mergedConfig, price: dynamicPrice }
+         };
+      }
+      return node;
+    }));
+  };
 
   const onConnect = useCallback(
     (params: any) => setEdges((eds) => addEdge(params, eds)),
@@ -98,7 +119,7 @@ export default function CostEstimatorApp() {
         id: `node-${Date.now()}`,
         type: 'serviceNode',
         position,
-        data: { name: parsedData.name, price: parsedData.price, id: parsedData.id },
+        data: { name: parsedData.name, price: parsedData.price, basePrice: parsedData.price, id: parsedData.id, config: { instances: 1 } },
       };
 
       setNodes((nds) => nds.concat(newNode));
@@ -180,9 +201,9 @@ export default function CostEstimatorApp() {
               setActiveLeftPanel('none');
               // Mock auto-generation of nodes from Intake Form
               setNodes([
-                { id: 'gen1', type: 'serviceNode', position: { x: 50, y: 150 }, data: { name: 'Amazon CloudFront', price: 8.50, id: 'cloudfront' } },
-                { id: 'gen2', type: 'serviceNode', position: { x: 300, y: 150 }, data: { name: 'Amazon EC2', price: 25.40, id: 'ec2' } },
-                { id: 'gen3', type: 'serviceNode', position: { x: 550, y: 150 }, data: { name: 'Amazon RDS', price: 15.20, id: 'rds' } }
+                { id: 'gen1', type: 'serviceNode', position: { x: 50, y: 150 }, data: { name: 'Amazon CloudFront', price: 8.50, basePrice: 8.50, id: 'cloudfront', config: { instances: 1 } } },
+                { id: 'gen2', type: 'serviceNode', position: { x: 300, y: 150 }, data: { name: 'Amazon EC2', price: 25.40, basePrice: 25.40, id: 'ec2', config: { instances: 1 } } },
+                { id: 'gen3', type: 'serviceNode', position: { x: 550, y: 150 }, data: { name: 'Amazon RDS', price: 15.20, basePrice: 15.20, id: 'rds', config: { instances: 1 } } }
               ]);
               setEdges([
                 { id: 'e1-2', source: 'gen1', target: 'gen2', animated: true },
@@ -205,10 +226,10 @@ export default function CostEstimatorApp() {
                  onClick={() => {
                     setActiveLeftPanel('none');
                     setNodes([
-                      { id: 'ex-web1', type: 'serviceNode', position: { x: 50, y: 100 }, data: { name: 'Amazon CloudFront', price: 8.50, id: 'cloudfront' } },
-                      { id: 'ex-web2', type: 'serviceNode', position: { x: 300, y: 50 }, data: { name: 'Amazon S3', price: 5.00, id: 's3' } },
-                      { id: 'ex-web3', type: 'serviceNode', position: { x: 300, y: 200 }, data: { name: 'Amazon EC2', price: 25.40, id: 'ec2' } },
-                      { id: 'ex-web4', type: 'serviceNode', position: { x: 550, y: 200 }, data: { name: 'Amazon RDS', price: 15.20, id: 'rds' } }
+                      { id: 'ex-web1', type: 'serviceNode', position: { x: 50, y: 100 }, data: { name: 'Amazon CloudFront', price: 8.50, basePrice: 8.50, id: 'cloudfront', config: { instances: 1 } } },
+                      { id: 'ex-web2', type: 'serviceNode', position: { x: 300, y: 50 }, data: { name: 'Amazon S3', price: 5.00, basePrice: 5.00, id: 's3', config: { instances: 1 } } },
+                      { id: 'ex-web3', type: 'serviceNode', position: { x: 300, y: 200 }, data: { name: 'Amazon EC2', price: 25.40, basePrice: 25.40, id: 'ec2', config: { instances: 1, instanceType: 't3.micro' } } },
+                      { id: 'ex-web4', type: 'serviceNode', position: { x: 550, y: 200 }, data: { name: 'Amazon RDS', price: 15.20, basePrice: 15.20, id: 'rds', config: { instances: 1, instanceClass: 'db.t3.micro' } } }
                     ]);
                     setEdges([
                       { id: 'e-web-1', source: 'ex-web1', target: 'ex-web2', animated: true },
@@ -226,9 +247,9 @@ export default function CostEstimatorApp() {
                  onClick={() => {
                     setActiveLeftPanel('none');
                     setNodes([
-                      { id: 'ex-srv1', type: 'serviceNode', position: { x: 50, y: 150 }, data: { name: 'Amazon API Gateway', price: 3.50, id: 'apigateway' } },
-                      { id: 'ex-srv2', type: 'serviceNode', position: { x: 300, y: 150 }, data: { name: 'AWS Lambda', price: 2.00, id: 'lambda' } },
-                      { id: 'ex-srv3', type: 'serviceNode', position: { x: 550, y: 150 }, data: { name: 'Amazon DynamoDB', price: 1.25, id: 'dynamodb' } }
+                      { id: 'ex-srv1', type: 'serviceNode', position: { x: 50, y: 150 }, data: { name: 'Amazon API Gateway', price: 3.50, basePrice: 3.50, id: 'apigateway', config: { instances: 1 } } },
+                      { id: 'ex-srv2', type: 'serviceNode', position: { x: 300, y: 150 }, data: { name: 'AWS Lambda', price: 2.00, basePrice: 2.00, id: 'lambda', config: { instances: 1, invocations1M: 1, memoryMB: 512 } } },
+                      { id: 'ex-srv3', type: 'serviceNode', position: { x: 550, y: 150 }, data: { name: 'Amazon DynamoDB', price: 1.25, basePrice: 1.25, id: 'dynamodb', config: { instances: 1 } } }
                     ]);
                     setEdges([
                       { id: 'e-srv-1', source: 'ex-srv1', target: 'ex-srv2', animated: true },
@@ -245,10 +266,10 @@ export default function CostEstimatorApp() {
                  onClick={() => {
                     setActiveLeftPanel('none');
                     setNodes([
-                      { id: 'ex-dl1', type: 'serviceNode', position: { x: 50, y: 150 }, data: { name: 'Amazon Kinesis', price: 15.00, id: 'kinesis' } },
-                      { id: 'ex-dl2', type: 'serviceNode', position: { x: 300, y: 150 }, data: { name: 'Amazon S3', price: 5.00, id: 's3' } },
-                      { id: 'ex-dl3', type: 'serviceNode', position: { x: 550, y: 80 }, data: { name: 'AWS Glue', price: 12.00, id: 'glue' } },
-                      { id: 'ex-dl4', type: 'serviceNode', position: { x: 550, y: 220 }, data: { name: 'Amazon Athena', price: 5.00, id: 'athena' } }
+                      { id: 'ex-dl1', type: 'serviceNode', position: { x: 50, y: 150 }, data: { name: 'Amazon Kinesis', price: 15.00, basePrice: 15.00, id: 'kinesis', config: { instances: 1 } } },
+                      { id: 'ex-dl2', type: 'serviceNode', position: { x: 300, y: 150 }, data: { name: 'Amazon S3', price: 5.00, basePrice: 5.00, id: 's3', config: { instances: 1, storageGB: 100 } } },
+                      { id: 'ex-dl3', type: 'serviceNode', position: { x: 550, y: 80 }, data: { name: 'AWS Glue', price: 12.00, basePrice: 12.00, id: 'glue', config: { instances: 1 } } },
+                      { id: 'ex-dl4', type: 'serviceNode', position: { x: 550, y: 220 }, data: { name: 'Amazon Athena', price: 5.00, basePrice: 5.00, id: 'athena', config: { instances: 1 } } }
                     ]);
                     setEdges([
                       { id: 'e-dl-1', source: 'ex-dl1', target: 'ex-dl2' },
@@ -260,6 +281,62 @@ export default function CostEstimatorApp() {
                  <h4 className="font-semibold text-indigo-400 mb-1 group-hover:text-indigo-300">Modern Data Lake</h4>
                  <p className="text-xs text-gray-400 leading-relaxed">Stream data ingestion to S3, with Glue for cataloging and Athena for querying.</p>
              </button>
+
+             <button 
+                 className="text-left bg-gray-800 border border-gray-700 p-4 rounded-lg hover:border-indigo-500 hover:bg-gray-800/80 transition-all group relative overflow-hidden"
+                 onClick={() => {
+                    setActiveLeftPanel('none');
+                    setNodes([
+                      { id: 'tf-s1', type: 'serviceNode', position: { x: 50, y: 150 }, data: { name: 'Application Load Balancer', price: 16.50, basePrice: 16.50, id: 'alb', config: { instances: 1 } } },
+                      { id: 'tf-s2', type: 'serviceNode', position: { x: 300, y: 50 }, data: { name: 'Amazon CloudFront', price: 8.50, basePrice: 8.50, id: 'cloudfront', config: { instances: 1 } } },
+                      { id: 'tf-s3', type: 'serviceNode', position: { x: 300, y: 150 }, data: { name: 'AWS Fargate', price: 12.00, basePrice: 12.00, id: 'fargate', config: { instances: 2 } } },
+                      { id: 'tf-s4', type: 'serviceNode', position: { x: 550, y: 80 }, data: { name: 'Amazon EFS', price: 5.00, basePrice: 5.00, id: 'efs', config: { instances: 1 } } },
+                      { id: 'tf-s5', type: 'serviceNode', position: { x: 550, y: 220 }, data: { name: 'Amazon RDS', price: 15.20, basePrice: 15.20, id: 'rds', config: { instances: 1, instanceClass: 'db.t3.medium' } } }
+                    ]);
+                    setEdges([
+                      { id: 'tf-e1', source: 'tf-s1', target: 'tf-s3', animated: true },
+                      { id: 'tf-e2', source: 'tf-s2', target: 'tf-s1' },
+                      { id: 'tf-e3', source: 'tf-s3', target: 'tf-s4' },
+                      { id: 'tf-e4', source: 'tf-s3', target: 'tf-s5' }
+                    ]);
+                 }}
+             >
+                 <div className="absolute top-0 right-0 bg-indigo-600 text-xs px-2 py-0.5 rounded-bl-lg font-mono text-white shadow">Local IaC</div>
+                 <h4 className="font-semibold text-indigo-400 mb-1 group-hover:text-indigo-300 mt-2">Import: infra/aws/wordpress_fargate</h4>
+                 <p className="text-xs text-gray-400 leading-relaxed mb-3">Reads your ALB, CloudFront, EFS, Fargate, and RDS configuration.</p>
+                 <div className="bg-black/50 p-2 rounded text-[10px] font-mono text-gray-500 line-clamp-3">
+                   {`resource "aws_ecs_service" "wordpress" {
+  name = "wordpress-service"
+  launch_type = "FARGATE"
+}`}
+                 </div>
+             </button>
+
+             <button 
+                 className="text-left bg-gray-800 border border-gray-700 p-4 rounded-lg hover:border-indigo-500 hover:bg-gray-800/80 transition-all group relative overflow-hidden"
+                 onClick={() => {
+                    setActiveLeftPanel('none');
+                    setNodes([
+                      { id: 'tf-m1', type: 'serviceNode', position: { x: 50, y: 150 }, data: { name: 'Amazon Route 53', price: 0.50, basePrice: 0.50, id: 'route53', config: { instances: 1 } } },
+                      { id: 'tf-m2', type: 'serviceNode', position: { x: 300, y: 150 }, data: { name: 'Amazon API Gateway', price: 3.50, basePrice: 3.50, id: 'apigateway', config: { instances: 1 } } },
+                      { id: 'tf-m3', type: 'serviceNode', position: { x: 550, y: 150 }, data: { name: 'AWS Lambda', price: 2.00, basePrice: 2.00, id: 'lambda', config: { instances: 1, memoryMB: 1024 } } }
+                    ]);
+                    setEdges([
+                      { id: 'tfe-1', source: 'tf-m1', target: 'tf-m2' },
+                      { id: 'tfe-2', source: 'tf-m2', target: 'tf-m3', animated: true }
+                    ]);
+                 }}
+             >
+                 <div className="absolute top-0 right-0 bg-indigo-600 text-xs px-2 py-0.5 rounded-bl-lg font-mono text-white shadow">Local IaC</div>
+                 <h4 className="font-semibold text-indigo-400 mb-1 group-hover:text-indigo-300 mt-2">Import: infra/aws/aws_lambda_api</h4>
+                 <p className="text-xs text-gray-400 leading-relaxed mb-3">Imports your custom API Gateway and Lambda backend project.</p>
+                 <div className="bg-black/50 p-2 rounded text-[10px] font-mono text-gray-500 line-clamp-3">
+                   {`resource "aws_lambda_function" "api" {
+  function_name = "production-api"
+  runtime = "nodejs18.x"
+}`}
+                 </div>
+             </button>
          </div>
       </div>
 
@@ -268,6 +345,23 @@ export default function CostEstimatorApp() {
         <header className="h-[70px] border-b border-gray-800 bg-gray-900/50 backdrop-blur pl-6 pr-6 flex items-center justify-between shrink-0">
            <div className="flex items-center gap-4">
               <span className="font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-indigo-400">AWS Cost Estimator</span>
+              
+              <div className="flex flex-col ml-4">
+                 <div className="flex items-center bg-gray-800 border border-gray-700 rounded-md">
+                    <span className="pl-3 pr-2 text-xs text-gray-400">Site Traffic (RPS):</span>
+                    <input 
+                       type="number" 
+                       min="1"
+                       value={globalRps}
+                       onChange={(e) => setGlobalRps(parseInt(e.target.value) || 1)}
+                       className="bg-transparent text-sm text-white px-2 py-1 outline-none w-20 text-right"
+                    />
+                 </div>
+                 <div className="text-[10px] text-indigo-400/70 mt-1 text-right font-mono tracking-tight">
+                    ~{(globalRps * 86400).toLocaleString()} reqs / day
+                 </div>
+              </div>
+
               <select 
                 value={region} 
                 onChange={(e) => setRegion(e.target.value)}
@@ -302,25 +396,41 @@ export default function CostEstimatorApp() {
       </div>
 
       {/* RIGHT PALETTE SIDEBAR */}
-      <aside className="w-[200px] bg-gray-900 border-l border-gray-800 px-4 py-6 z-10 flex flex-col gap-6 shrink-0 shadow-lg overflow-y-auto">
-         {categories.length === 0 ? (
+      <aside className="w-[300px] bg-gray-900 border-l border-gray-800 px-4 py-6 z-10 flex flex-col gap-6 shrink-0 shadow-lg overflow-y-auto transition-all">
+         {selectedNode ? (
+            <NodeInspector node={selectedNode} onChange={updateNodeConfig} />
+         ) : categories.length === 0 ? (
             <div className="text-gray-500 text-xs italic">Loading services...</div>
          ) : (
-            categories.map(category => (
-               <div key={category.category}>
-                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">{category.category}</h3>
-                  {category.services.map(service => (
-                     <div 
-                        key={service.id}
-                        onDragStart={(e) => onDragStart(e, { id: service.id, name: service.name, price: service.price })} 
-                        draggable 
-                        className="bg-gray-800 border border-gray-700 p-3 rounded cursor-grab hover:bg-gray-700 hover:border-indigo-500 transition flex flex-col mb-2 text-sm shadow-sm"
-                     >
-                        {service.name} <span className="text-xs text-indigo-400 font-mono mt-1">${service.price.toFixed(2)}/mo</span>
-                     </div>
-                  ))}
-               </div>
-            ))
+            <>
+              <h2 className="text-xl font-bold mb-1 border-b border-gray-800 pb-2 text-white">Service Catalog</h2>
+              <input 
+                 type="text" 
+                 placeholder="Search services..." 
+                 value={searchQuery}
+                 onChange={e => setSearchQuery(e.target.value)}
+                 className="w-full bg-gray-800 border border-gray-700 rounded p-2 text-sm text-white outline-none focus:border-indigo-500 transition-colors"
+              />
+              {categories.map(category => {
+                 const filteredServices = category.services.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+                 if (filteredServices.length === 0) return null;
+                 return (
+                  <div key={category.category}>
+                     <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">{category.category}</h3>
+                     {filteredServices.map(service => (
+                        <div 
+                           key={service.id}
+                           onDragStart={(e) => onDragStart(e, { id: service.id, name: service.name, price: service.price })} 
+                           draggable 
+                           className="bg-gray-800 border border-gray-700 p-3 rounded cursor-grab hover:bg-gray-700 hover:border-indigo-500 transition flex flex-col mb-2 text-sm shadow-sm"
+                        >
+                           {service.name} <span className="text-xs text-indigo-400 font-mono mt-1">${service.price.toFixed(2)}/mo</span>
+                        </div>
+                     ))}
+                  </div>
+                 )
+              })}
+            </>
          )}
       </aside>
 
