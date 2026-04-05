@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Cost Estimator Widget</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="widget-container">
+        <header class="widget-header">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </div>
+                <h2>AWS Cost Estimator</h2>
+            </div>
+            <div class="region-selector">
+                <select id="regionSelect" class="glass-select">
+                    <option value="us-east-1">US East (N. Virginia)</option>
+                    <option value="us-west-2">US West (Oregon)</option>
+                    <option value="eu-west-1">Europe (Ireland)</option>
+                    <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                </select>
+            </div>
+            <div class="total-estimated">
+                <span class="label">Est. Monthly</span>
+                <span class="value" id="totalCost">$0.00</span>
+            </div>
+        </header>
+
+        <nav class="nav-sidebar">
+            <div class="nav-item active" id="nav-designer" title="Visual Designer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+            </div>
+            <div class="nav-item" id="nav-wizard" title="Smart Intake Wizard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+        </nav>
+
+        <main class="canvas-area" id="dropzone">
+            <svg id="connections-layer"></svg>
+            <div class="empty-state">
+                <p>Drag and drop AWS services here to estimate cost</p>
+                <p style="font-size: 0.75rem; margin-top: 5px;">Drag dots to connect nodes</p>
+            </div>
+            <!-- Nodes will be dropped here -->
+        </main>
+
+        <aside class="palette">
+            <div class="category">
+                <h3 class="category-title">Compute</h3>
+                <div class="service-item" draggable="true" data-service="ec2" data-price="25.40">
+                    <div class="service-icon ec2"></div>
+                    <span>Amazon EC2</span>
+                </div>
+                <div class="service-item" draggable="true" data-service="lambda" data-price="2.00">
+                    <div class="service-icon lambda"></div>
+                    <span>AWS Lambda</span>
+                </div>
+            </div>
+            <div class="category">
+                <h3 class="category-title">Database</h3>
+                <div class="service-item" draggable="true" data-service="rds" data-price="15.20">
+                    <div class="service-icon rds"></div>
+                    <span>Amazon RDS</span>
+                </div>
+            </div>
+            <div class="category">
+                <h3 class="category-title">Storage</h3>
+                <div class="service-item" draggable="true" data-service="s3" data-price="5.00">
+                    <div class="service-icon s3"></div>
+                    <span>Amazon S3</span>
+                </div>
+            </div>
+        </aside>
+
+        <footer class="widget-footer">
+            <button class="btn-primary">Generate Full Architecture</button>
+            <p class="disclaimer">Powered by internal estimator engine. Prices are estimates.</p>
+        </footer>
+
+        <!-- Smart Intake Sidebar -->
+        <div class="wizard-sidebar" id="wizardSidebar">
+            <div class="wizard-content">
+                <div class="wizard-header">
+                    <h2>Smart Intake Form</h2>
+                    <button class="close-wizard" id="closeWizard">&times;</button>
+                </div>
+                <div class="wizard-body">
+                    <p class="wizard-subtitle">Tell us about your workload, and we'll generate the architecture for you.</p>
+
+                    <h3 class="wizard-step-title">Step 1: App Type</h3>
+                    <div class="form-group">
+                        <label>What kind of application is this?</label>
+                        <div class="chip-group">
+                            <div class="chip active">Web/API</div>
+                            <div class="chip">Mobile Backend</div>
+                            <div class="chip">Static Website</div>
+                            <div class="chip">Data Pipeline</div>
+                            <div class="chip">Machine Learning</div>
+                            <div class="chip">Internal Tool</div>
+                        </div>
+                    </div>
+
+                    <h3 class="wizard-step-title">Step 2: Traffic & Usage</h3>
+                    <div class="form-group">
+                        <label>Monthly Active Users (MAU)</label>
+                        <input type="range" min="1" max="7" value="3" class="range-slider">
+                        <div class="range-labels">
+                            <span>1K</span><span>50K</span><span>1M</span><span>5M+</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Peak Requests per Second (RPS)</label>
+                        <input type="range" min="1" max="6" value="2" class="range-slider">
+                        <div class="range-labels">
+                            <span>10</span><span>200</span><span>1000</span><span>5000+</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Traffic Pattern</label>
+                        <div class="chip-group">
+                            <div class="chip active">Steady</div>
+                            <div class="chip">Business Hrs</div>
+                            <div class="chip">Spiky</div>
+                            <div class="chip">Batch</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Average Response Time</label>
+                        <div class="chip-group">
+                            <div class="chip active">< 100ms</div>
+                            <div class="chip">100 - 500ms</div>
+                            <div class="chip">> 500ms</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Workload Type</label>
+                        <div class="chip-group">
+                            <div class="chip active">CPU Light</div>
+                            <div class="chip">CPU Moderate</div>
+                            <div class="chip">CPU Heavy</div>
+                            <div class="chip">Memory Heavy</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Outbound Data (GB/mo)</label>
+                        <input type="range" min="1" max="6" value="2" class="range-slider">
+                        <div class="range-labels">
+                            <span>10GB</span><span>500GB</span><span>5TB</span><span>10TB+</span>
+                        </div>
+                    </div>
+
+                    <h3 class="wizard-step-title">Step 3: Data & Storage</h3>
+                    
+                    <div class="form-group">
+                        <label>Database Type</label>
+                        <div class="chip-group">
+                            <div class="chip active">Relational (Open)</div>
+                            <div class="chip">Relational (Paid)</div>
+                            <div class="chip">NoSQL</div>
+                            <div class="chip">None</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Estimated Data Size</label>
+                        <div class="chip-group">
+                            <div class="chip active">< 10GB</div>
+                            <div class="chip">10-100GB</div>
+                            <div class="chip">100GB - 1TB</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Need High Availability (Multi-AZ)?</label>
+                        <div class="chip-group">
+                            <div class="chip active">Yes</div>
+                            <div class="chip">No</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Do you store files or media?</label>
+                        <div class="chip-group">
+                            <div class="chip active">Images/Docs</div>
+                            <div class="chip">Videos/Large</div>
+                            <div class="chip">No</div>
+                        </div>
+                    </div>
+
+                    <h3 class="wizard-step-title">Step 4: Requirements</h3>
+
+                    <div class="form-group">
+                        <label>Availability SLA Target</label>
+                        <div class="chip-group">
+                            <div class="chip">99.5%</div>
+                            <div class="chip active">99.9%</div>
+                            <div class="chip">99.99%</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Background Jobs / Actions?</label>
+                        <div class="chip-group">
+                            <div class="chip">None</div>
+                            <div class="chip active">Message Queues</div>
+                            <div class="chip">Emails / SMS</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Deployment Preference</label>
+                        <div class="chip-group">
+                            <div class="chip">Fully Managed</div>
+                            <div class="chip">Kubernetes (EKS)</div>
+                            <div class="chip active">Balanced</div>
+                            <div class="chip">Full Control</div>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" id="generateFromWizard" style="margin-top: 30px; width: 100%;">Apply to Design</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

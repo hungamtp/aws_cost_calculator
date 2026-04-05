@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    command: sh -c "if [ ! -d 'node_modules/next' ]; then npm install; fi && npm run dev"
