@@ -1,4 +1,5 @@
 import React from 'react';
+import { LayoutGrid } from 'lucide-react';
 
 export default function NodeInspector({ node, onChange }: { node: any, onChange: (id: string, conf: any) => void }) {
   const config = node.data.config || { instances: 1 };
@@ -183,6 +184,26 @@ export default function NodeInspector({ node, onChange }: { node: any, onChange:
          </div>
       )}
       
+      <div className="mt-4 pt-4 border-t border-gray-800">
+         <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <LayoutGrid size={12} /> Scaling & Capacity
+         </h3>
+         <div>
+            <label className="text-xs text-indigo-400 mb-1 block">Max RPS per Instance</label>
+            <input 
+              type="number" min="1" step="100"
+              className="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white outline-none focus:border-indigo-500" 
+              value={config.maxRps || (serviceId === 'ec2' ? 500 : 1000)} 
+              onChange={e => handleUpdate({ maxRps: parseInt(e.target.value) || 1 })} 
+            />
+            <div className="text-[10px] text-gray-500 mt-1">
+               {serviceId === 'ec2' 
+                  ? "Triggers auto-scaling of EC2 nodes when exceeded." 
+                  : "Resource capacity limit for this component."}
+            </div>
+         </div>
+      </div>
+
       {!['ec2', 's3', 'lambda', 'rds'].includes(serviceId) && (
          <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-xs text-indigo-300">
             Advanced multi-dimensional configurations coming soon for this service. Currently estimating via base regional rate.
