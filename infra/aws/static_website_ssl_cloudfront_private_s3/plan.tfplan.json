@@ -1,0 +1,60 @@
+{
+  "format_version": "1.1",
+  "terraform_version": "1.7.0",
+  "resource_changes": [
+    {
+      "address": "aws_s3_bucket.site",
+      "mode": "managed", "type": "aws_s3_bucket", "name": "site",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"], "before": null,
+        "after": { "bucket": "my-static-site-origin", "force_destroy": false },
+        "after_unknown": { "id": true, "arn": true }
+      }
+    },
+    {
+      "address": "aws_cloudfront_distribution.site",
+      "mode": "managed", "type": "aws_cloudfront_distribution", "name": "site",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"], "before": null,
+        "after": { "enabled": true, "default_root_object": "index.html", "price_class": "PriceClass_100" },
+        "after_unknown": { "id": true, "domain_name": true }
+      }
+    },
+    {
+      "address": "aws_route53_record.site",
+      "mode": "managed", "type": "aws_route53_record", "name": "site",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"], "before": null,
+        "after": { "type": "A", "name": "www.example.com" },
+        "after_unknown": { "id": true }
+      }
+    }
+  ],
+  "configuration": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_cloudfront_distribution.site",
+          "type": "aws_cloudfront_distribution", "name": "site",
+          "expressions": {
+            "origin": {
+              "domain_name": { "references": ["aws_s3_bucket.site"] }
+            }
+          }
+        },
+        {
+          "address": "aws_route53_record.site",
+          "type": "aws_route53_record", "name": "site",
+          "expressions": {
+            "alias": {
+              "name": { "references": ["aws_cloudfront_distribution.site"] }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

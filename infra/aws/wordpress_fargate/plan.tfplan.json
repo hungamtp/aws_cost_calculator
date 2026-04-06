@@ -1,0 +1,163 @@
+{
+  "format_version": "1.1",
+  "terraform_version": "1.7.0",
+  "resource_changes": [
+    {
+      "address": "aws_vpc.wordpress",
+      "mode": "managed", "type": "aws_vpc", "name": "wordpress",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"], "before": null,
+        "after": { "cidr_block": "10.0.0.0/16", "enable_dns_hostnames": true },
+        "after_unknown": { "id": true }
+      }
+    },
+    {
+      "address": "aws_lb.wordpress",
+      "mode": "managed", "type": "aws_lb", "name": "wordpress",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"], "before": null,
+        "after": { "name": "wordpress-alb", "internal": false, "load_balancer_type": "application" },
+        "after_unknown": { "id": true, "arn": true, "dns_name": true }
+      }
+    },
+    {
+      "address": "aws_lb_listener.http",
+      "mode": "managed", "type": "aws_lb_listener", "name": "http",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"], "before": null,
+        "after": { "port": 80, "protocol": "HTTP" },
+        "after_unknown": { "id": true }
+      }
+    },
+    {
+      "address": "aws_lb_target_group.wordpress",
+      "mode": "managed", "type": "aws_lb_target_group", "name": "wordpress",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"], "before": null,
+        "after": { "port": 80, "protocol": "HTTP", "target_type": "ip" },
+        "after_unknown": { "id": true, "arn": true }
+      }
+    },
+    {
+      "address": "aws_ecs_service.wordpress",
+      "mode": "managed", "type": "aws_ecs_service", "name": "wordpress",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"], "before": null,
+        "after": { "name": "wordpress", "desired_count": 2, "launch_type": "FARGATE" },
+        "after_unknown": { "id": true }
+      }
+    },
+    {
+      "address": "aws_db_instance.wordpress",
+      "mode": "managed", "type": "aws_db_instance", "name": "wordpress",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"], "before": null,
+        "after": { "engine": "mysql", "engine_version": "8.0", "instance_class": "db.t3.medium", "multi_az": true },
+        "after_unknown": { "id": true, "address": true }
+      }
+    },
+    {
+      "address": "aws_efs_file_system.wordpress",
+      "mode": "managed", "type": "aws_efs_file_system", "name": "wordpress",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"], "before": null,
+        "after": { "creation_token": "wordpress-efs", "encrypted": true },
+        "after_unknown": { "id": true }
+      }
+    },
+    {
+      "address": "aws_cloudfront_distribution.wordpress",
+      "mode": "managed", "type": "aws_cloudfront_distribution", "name": "wordpress",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"], "before": null,
+        "after": { "enabled": true, "price_class": "PriceClass_100" },
+        "after_unknown": { "id": true, "domain_name": true }
+      }
+    },
+    {
+      "address": "aws_route53_record.wordpress",
+      "mode": "managed", "type": "aws_route53_record", "name": "wordpress",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"], "before": null,
+        "after": { "type": "A", "ttl": 300 },
+        "after_unknown": { "id": true }
+      }
+    }
+  ],
+  "configuration": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_lb.wordpress",
+          "type": "aws_lb", "name": "wordpress",
+          "expressions": {
+            "subnets": { "references": ["aws_vpc.wordpress"] }
+          }
+        },
+        {
+          "address": "aws_lb_listener.http",
+          "type": "aws_lb_listener", "name": "http",
+          "expressions": {
+            "load_balancer_arn": { "references": ["aws_lb.wordpress"] },
+            "default_action": {
+              "target_group_arn": { "references": ["aws_lb_target_group.wordpress"] }
+            }
+          }
+        },
+        {
+          "address": "aws_ecs_service.wordpress",
+          "type": "aws_ecs_service", "name": "wordpress",
+          "expressions": {
+            "load_balancer": {
+              "target_group_arn": { "references": ["aws_lb_target_group.wordpress"] }
+            },
+            "network_configuration": {
+              "subnets": { "references": ["aws_vpc.wordpress"] }
+            }
+          }
+        },
+        {
+          "address": "aws_db_instance.wordpress",
+          "type": "aws_db_instance", "name": "wordpress",
+          "expressions": {
+            "db_subnet_group_name": { "references": ["aws_vpc.wordpress"] }
+          }
+        },
+        {
+          "address": "aws_efs_file_system.wordpress",
+          "type": "aws_efs_file_system", "name": "wordpress",
+          "expressions": {
+            "kms_key_id": { "references": ["aws_vpc.wordpress"] }
+          }
+        },
+        {
+          "address": "aws_cloudfront_distribution.wordpress",
+          "type": "aws_cloudfront_distribution", "name": "wordpress",
+          "expressions": {
+            "origin": {
+              "domain_name": { "references": ["aws_lb.wordpress"] }
+            }
+          }
+        },
+        {
+          "address": "aws_route53_record.wordpress",
+          "type": "aws_route53_record", "name": "wordpress",
+          "expressions": {
+            "alias": {
+              "name": { "references": ["aws_cloudfront_distribution.wordpress"] }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

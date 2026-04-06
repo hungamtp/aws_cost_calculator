@@ -116,7 +116,8 @@ export const getAwsServicesCatalog = async (regionLocation: string = "US East (N
           category: "Compute",
           services: [
              { id: "ec2", name: "Amazon EC2", price: 25.40 * regionalMultiplier },
-             { id: "lambda", name: "AWS Lambda", price: 2.00 * regionalMultiplier }
+             { id: "lambda", name: "AWS Lambda", price: 2.00 * regionalMultiplier },
+             { id: "fargate", name: "AWS Fargate", price: 12.00 * regionalMultiplier }
           ]
         },
         {
@@ -130,7 +131,8 @@ export const getAwsServicesCatalog = async (regionLocation: string = "US East (N
           category: "Database",
           services: [
              { id: "rds", name: "Amazon RDS", price: 15.20 * regionalMultiplier },
-             { id: "dynamodb", name: "Amazon DynamoDB", price: 1.25 * regionalMultiplier }
+             { id: "dynamodb", name: "Amazon DynamoDB", price: 1.25 * regionalMultiplier },
+             { id: "elasticache", name: "Amazon ElastiCache", price: 14.50 * regionalMultiplier }
           ]
         },
         {
@@ -144,20 +146,27 @@ export const getAwsServicesCatalog = async (regionLocation: string = "US East (N
           category: "Networking",
           services: [
              { id: "vpc", name: "Amazon VPC", price: 0.00 },
-             { id: "cloudfront", name: "Amazon CloudFront", price: 8.50 * regionalMultiplier }
+             { id: "cloudfront", name: "Amazon CloudFront", price: 8.50 * regionalMultiplier },
+             { id: "alb", name: "Application Load Balancer", price: 16.50 * regionalMultiplier },
+             { id: "route53", name: "Amazon Route 53", price: 0.50 * regionalMultiplier },
+             { id: "apigateway", name: "Amazon API Gateway", price: 3.50 * regionalMultiplier }
           ]
         },
         {
           category: "Security",
           services: [
              { id: "iam", name: "AWS IAM", price: 0.00 },
-             { id: "cognito", name: "Amazon Cognito", price: 5.50 * regionalMultiplier }
+             { id: "cognito", name: "Amazon Cognito", price: 5.50 * regionalMultiplier },
+             { id: "kms", name: "AWS KMS", price: 1.00 * regionalMultiplier }
           ]
         },
         {
           category: "Analytics",
           services: [
-             { id: "athena", name: "Amazon Athena", price: 5.00 * regionalMultiplier }
+             { id: "athena", name: "Amazon Athena", price: 5.00 * regionalMultiplier },
+             { id: "kinesis", name: "Amazon Kinesis", price: 15.00 * regionalMultiplier },
+             { id: "msk", name: "Amazon MSK", price: 120.00 * regionalMultiplier },
+             { id: "glue", name: "AWS Glue", price: 12.00 * regionalMultiplier }
           ]
         },
         {
